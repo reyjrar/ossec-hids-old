@@ -9,7 +9,7 @@
  * License (version 2) as published by the FSF - Free Software
  * Foundation.
  *
- * License details at the LICENSE file included with OSSEC or 
+ * License details at the LICENSE file included with OSSEC or
  * online at: http://www.ossec.net/en/licensing.html
  */
 
@@ -26,8 +26,8 @@
 void OS_CSyslogD(SyslogConfig **syslog_config)
 {
     int s = 0;
-    time_t tm;     
-    struct tm *p;       
+    time_t tm;
+    struct tm *p;
 
     file_queue *fileq;
     alert_data *al_data;
@@ -35,7 +35,7 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
 
     /* Getting currently time before starting */
     tm = time(NULL);
-    p = localtime(&tm);	
+    p = localtime(&tm);
 
 
     /* Initating file queue - to read the alerts */
@@ -55,15 +55,15 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
         }
         else
         {
-            merror("%s: INFO: Forwarding alerts via syslog to: '%s:%d'.", 
-                   ARGV0, syslog_config[s]->server, syslog_config[s]->port); 
+            merror("%s: INFO: Forwarding alerts via syslog to: '%s:%d'.",
+                   ARGV0, syslog_config[s]->server, syslog_config[s]->port);
         }
 
         s++;
     }
 
 
-    
+
     /* Infinite loop reading the alerts and inserting them. */
     while(1)
     {
@@ -124,7 +124,7 @@ unsigned int field_add_string(char *dest, unsigned int size, const char *format,
             )
     ) {
         len = snprintf(buffer, 255, format, value);
-        strncat(dest, buffer, OS_SIZE_2048);
+        strlcat(dest, buffer, size);
     }
 
     return len;
@@ -138,7 +138,7 @@ unsigned int field_add_long_string(char *dest, unsigned int size, const char *fo
 
     if(value != NULL) {
         len = snprintf(buffer, OS_SIZE_2048 - dest_sz - 2  , format, value);
-        strncat(dest, buffer, size);
+        strlcat(dest, buffer, size);
     }
 
     return len;
@@ -151,7 +151,7 @@ unsigned int field_add_int(char *dest, unsigned int size, const char *format, co
 
     if( value > 0 ) {
         len = snprintf(buffer, 255, format, value);
-        strncat(dest, buffer, OS_SIZE_2048);
+        strlcat(dest, buffer, size);
     }
 
     return len;
