@@ -112,9 +112,15 @@ char *strip_double_quotes(char *source) {
 }
 
 /* Format Field for output */
-unsigned int field_add_string(char *dest, unsigned int size, const char *format, const char *value ) {
-    char buffer[255];
-    unsigned int len = 0;
+int field_add_string(char *dest, int size, const char *format, const char *value ) {
+    char buffer[OS_SIZE_2048];
+    int len = 0;
+    int dest_sz = size - strnlen(dest, OS_SIZE_2048);
+
+    if(dest_sz <= 0 ) {
+        // Not enough room in the buffer
+        return -1;
+    }
 
     if(value != NULL &&
             (
@@ -123,35 +129,27 @@ unsigned int field_add_string(char *dest, unsigned int size, const char *format,
                 ((value[0] != 'u') && (value[1] != 'n') && (value[4] != 'k'))
             )
     ) {
-        len = snprintf(buffer, 255, format, value);
-        strlcat(dest, buffer, size);
-    }
-
-    return len;
-}
-
-/* Add long string */
-unsigned int field_add_long_string(char *dest, unsigned int size, const char *format, const char *value ) {
-    char buffer[OS_SIZE_2048 + 1];
-    unsigned int len = 0;
-    unsigned int dest_sz = strlen(dest);
-
-    if(value != NULL) {
-        len = snprintf(buffer, OS_SIZE_2048 - dest_sz - 2  , format, value);
-        strlcat(dest, buffer, size);
+        len = snprintf(buffer, sizeof(buffer) - dest_sz - 1, format, value);
+        strncat(dest, buffer, dest_sz);
     }
 
     return len;
 }
 
 /* Handle integers in the second position */
-unsigned int field_add_int(char *dest, unsigned int size, const char *format, const int value ) {
+int field_add_int(char *dest, int size, const char *format, const int value ) {
     char buffer[255];
-    unsigned int len = 0;
+    int len = 0;
+    int dest_sz = size - strnlen(dest, OS_SIZE_2048);
+
+    if(dest_sz <= 0 ) {
+        // Not enough room in the buffer
+        return -1;
+    }
 
     if( value > 0 ) {
-        len = snprintf(buffer, 255, format, value);
-        strlcat(dest, buffer, size);
+        len = snprintf(buffer, sizeof(buffer), format, value);
+        strncat(dest, buffer, dest_sz);
     }
 
     return len;

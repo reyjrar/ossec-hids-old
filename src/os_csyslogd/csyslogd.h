@@ -9,7 +9,7 @@
  * License (version 2) as published by the FSF - Free Software
  * Foundation.
  *
- * License details at the LICENSE file included with OSSEC or 
+ * License details at the LICENSE file included with OSSEC or
  * online at: http://www.ossec.net/en/licensing.html
  */
 
@@ -39,8 +39,8 @@ void OS_CSyslogD(SyslogConfig **syslog_config);
 char *strip_double_quotes(char* source);
 
 /* Conditional Field Formatting */
-unsigned int field_add_int(char *dest, unsigned int size, const char *format, const int value );
-unsigned int field_add_string(char *dest, unsigned int size, const char *format, const char *value );
+int field_add_int(char *dest, int size, const char *format, const int value );
+int field_add_string(char *dest, int size, const char *format, const char *value );
 
 
 /** Global vars **/
