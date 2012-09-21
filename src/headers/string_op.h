@@ -22,6 +22,12 @@
  * Trims the cr and/or LF from the last positions of a string
  */
 void os_trimcrlf(char *str);
+/* Similiar to Perl's substr() function */
+int os_substr(char *dest, const char *src, int position, int length);
+
+/* Remove a character from a string */
+char *os_strip_char(const char *source, char remove);
+
 
 
 #endif

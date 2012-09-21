@@ -94,23 +94,6 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
     }
 }
 
-/* Remove double quotes from these fields */
-char *strip_double_quotes(char *source) {
-    char *clean = malloc( strlen(source) + 1 );
-    char strip = '"';
-    int i;
-
-    for( i=0; *source; source++ ) {
-        if ( *source != strip ) {
-            clean[i] = *source;
-            i++;
-        }
-    }
-    clean[i] = 0;
-
-    return clean;
-}
-
 /* Format Field for output */
 int field_add_string(char *dest, int size, const char *format, const char *value ) {
     char buffer[OS_SIZE_2048];
@@ -131,6 +114,52 @@ int field_add_string(char *dest, int size, const char *format, const char *value
     ) {
         len = snprintf(buffer, sizeof(buffer) - dest_sz - 1, format, value);
         strncat(dest, buffer, dest_sz);
+    }
+
+    return len;
+}
+
+/* Add a field, but truncate if too long */
+int field_add_truncated(char *dest, int size, const char *format, const char *value, int fmt_size ) {
+    char buffer[OS_SIZE_2048];
+
+    int available_sz = size - strnlen(dest, OS_SIZE_2048);
+    int total_sz = strlen(value) + strlen(format) - fmt_size;
+    int field_sz = available_sz - strlen(format) + fmt_size;
+
+    int len = 0;
+    char trailer[] = "...";
+    char *truncated;
+
+    if(available_sz <= 0 ) {
+        // Not enough room in the buffer
+        return -1;
+    }
+
+    if(value != NULL &&
+            (
+                ((value[0] != '(') && (value[1] != 'n') && (value[2] != 'o')) ||
+                ((value[0] != '(') && (value[1] != 'u') && (value[2] != 'n')) ||
+                ((value[0] != 'u') && (value[1] != 'n') && (value[4] != 'k'))
+            )
+    ) {
+        if( (truncated=malloc(field_sz)) == NULL ) {
+            // Memory error
+            return -3;
+        }
+
+        if( total_sz > available_sz ) {
+            // Truncate and add a trailer
+            os_substr(truncated, value, 0, field_sz - strlen(trailer) - 1);
+            strcat(truncated, trailer);
+        }
+        else {
+            strncpy(truncated,value,field_sz);
+        }
+
+        len = snprintf(buffer, available_sz, format, truncated);
+        strncat(dest, buffer, available_sz);
+        free(truncated);
     }
 
     return len;
