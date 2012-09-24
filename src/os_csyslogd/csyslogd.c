@@ -9,12 +9,17 @@
  * License (version 2) as published by the FSF - Free Software
  * Foundation.
  *
- * License details at the LICENSE file included with OSSEC or 
+ * License details at the LICENSE file included with OSSEC or
  * online at: http://www.ossec.net/en/licensing.html
  */
 
 
 
+/* strnlen is a GNU extension */
+#ifdef __linux__
+ #define _GNU_SOURCE
+ #include <string.h>
+#endif
 #include "csyslogd.h"
 #include "os_net/os_net.h"
 
@@ -26,8 +31,8 @@
 void OS_CSyslogD(SyslogConfig **syslog_config)
 {
     int s = 0;
-    time_t tm;     
-    struct tm *p;       
+    time_t tm;
+    struct tm *p;
 
     file_queue *fileq;
     alert_data *al_data;
@@ -35,7 +40,7 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
 
     /* Getting currently time before starting */
     tm = time(NULL);
-    p = localtime(&tm);	
+    p = localtime(&tm);
 
 
     /* Initating file queue - to read the alerts */
@@ -55,15 +60,15 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
         }
         else
         {
-            merror("%s: INFO: Forwarding alerts via syslog to: '%s:%d'.", 
-                   ARGV0, syslog_config[s]->server, syslog_config[s]->port); 
+            merror("%s: INFO: Forwarding alerts via syslog to: '%s:%d'.",
+                   ARGV0, syslog_config[s]->server, syslog_config[s]->port);
         }
 
         s++;
     }
 
 
-    
+
     /* Infinite loop reading the alerts and inserting them. */
     while(1)
     {
@@ -94,27 +99,16 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
     }
 }
 
-/* Remove double quotes from these fields */
-char *strip_double_quotes(char *source) {
-    char *clean = malloc( strlen(source) + 1 );
-    char strip = '"';
-    int i;
-
-    for( i=0; *source; source++ ) {
-        if ( *source != strip ) {
-            clean[i] = *source;
-            i++;
-        }
-    }
-    clean[i] = 0;
-
-    return clean;
-}
-
 /* Format Field for output */
-unsigned int field_add_string(char *dest, unsigned int size, const char *format, const char *value ) {
-    char buffer[255];
-    unsigned int len = 0;
+int field_add_string(char *dest, int size, const char *format, const char *value ) {
+    char buffer[OS_SIZE_2048];
+    int len = 0;
+    int dest_sz = size - strnlen(dest, OS_SIZE_2048);
+
+    if(dest_sz <= 0 ) {
+        // Not enough room in the buffer
+        return -1;
+    }
 
     if(value != NULL &&
             (
@@ -123,35 +117,73 @@ unsigned int field_add_string(char *dest, unsigned int size, const char *format,
                 ((value[0] != 'u') && (value[1] != 'n') && (value[4] != 'k'))
             )
     ) {
-        len = snprintf(buffer, 255, format, value);
-        strncat(dest, buffer, OS_SIZE_2048);
+        len = snprintf(buffer, sizeof(buffer) - dest_sz - 1, format, value);
+        strncat(dest, buffer, dest_sz);
     }
 
     return len;
 }
 
-/* Add long string */
-unsigned int field_add_long_string(char *dest, unsigned int size, const char *format, const char *value ) {
-    char buffer[OS_SIZE_2048 + 1];
-    unsigned int len = 0;
-    unsigned int dest_sz = strlen(dest);
+/* Add a field, but truncate if too long */
+int field_add_truncated(char *dest, int size, const char *format, const char *value, int fmt_size ) {
+    char buffer[OS_SIZE_2048];
 
-    if(value != NULL) {
-        len = snprintf(buffer, OS_SIZE_2048 - dest_sz - 2  , format, value);
-        strncat(dest, buffer, size);
+    int available_sz = size - strnlen(dest, OS_SIZE_2048);
+    int total_sz = strlen(value) + strlen(format) - fmt_size;
+    int field_sz = available_sz - strlen(format) + fmt_size;
+
+    int len = 0;
+    char trailer[] = "...";
+    char *truncated;
+
+    if(available_sz <= 0 ) {
+        // Not enough room in the buffer
+        return -1;
+    }
+
+    if(value != NULL &&
+            (
+                ((value[0] != '(') && (value[1] != 'n') && (value[2] != 'o')) ||
+                ((value[0] != '(') && (value[1] != 'u') && (value[2] != 'n')) ||
+                ((value[0] != 'u') && (value[1] != 'n') && (value[4] != 'k'))
+            )
+    ) {
+        if( (truncated=malloc(field_sz)) == NULL ) {
+            // Memory error
+            return -3;
+        }
+
+        if( total_sz > available_sz ) {
+            // Truncate and add a trailer
+            os_substr(truncated, value, 0, field_sz - strlen(trailer) - 1);
+            strcat(truncated, trailer);
+        }
+        else {
+            strncpy(truncated,value,field_sz);
+        }
+
+        len = snprintf(buffer, available_sz, format, truncated);
+        strncat(dest, buffer, available_sz);
+        free(truncated);
     }
 
     return len;
 }
 
 /* Handle integers in the second position */
-unsigned int field_add_int(char *dest, unsigned int size, const char *format, const int value ) {
+int field_add_int(char *dest, int size, const char *format, const int value ) {
     char buffer[255];
-    unsigned int len = 0;
+    int len = 0;
+    int dest_sz = size - strnlen(dest, OS_SIZE_2048);
+
+    if(dest_sz <= 0 ) {
+        // Not enough room in the buffer
+        return -1;
+    }
 
     if( value > 0 ) {
-        len = snprintf(buffer, 255, format, value);
-        strncat(dest, buffer, OS_SIZE_2048);
+        len = snprintf(buffer, sizeof(buffer), format, value);
+        strncat(dest, buffer, dest_sz);
     }
 
     return len;
