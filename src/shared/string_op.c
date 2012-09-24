@@ -34,7 +34,7 @@ void os_trimcrlf(char *str)
     }
 }
 
-/* Remove double quotes from these fields */
+/* Remove offending char (e.g., double quotes) from source */
 char *os_strip_char(const char *source, char remove) {
     char *clean = malloc( strlen(source) + 1 );
     int i;
