@@ -591,7 +591,6 @@ void OS_ReadMSG_analysisd(int m_queue)
         //ErrorExit(FTS_LIST_ERROR, ARGV0);
     }
 
-
     /* Starting the active response queues */
     if(Config.ar)
     {
@@ -859,7 +858,6 @@ void OS_ReadMSG_analysisd(int m_queue)
             if( lf->decoder_info->accumulate == 1 ) {
                 lf = Accumulate(lf);
             }
-
 
             /* Firewall event */
             if(lf->decoder_info->type == FIREWALL)
@@ -1230,8 +1228,6 @@ RuleInfo *OS_CheckIfRuleMatch(Eventinfo *lf, RuleNode *curr_node)
         if(!OSMatch_Execute(lf->log, lf->size, currently_rule->match))
             return(NULL);
     }
-
-
 
     /* Checking if exist any regex for this rule */
     if(currently_rule->regex)
