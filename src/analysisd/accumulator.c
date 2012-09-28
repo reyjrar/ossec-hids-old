@@ -220,13 +220,13 @@ Eventinfo* Accumulate(Eventinfo *lf)
     // Setup the data for storage
     char* data = malloc(OS_ACM_MAXDATA);
     result = snprintf(data, OS_ACM_MAXDATA, "%d|%s|%s|%s|%s|%s",
-            elm_current,
-            (lf->dstuser != NULL)?lf->dstuser:"",
-            (lf->srcuser != NULL)?lf->srcuser:"",
-            (lf->dstip   != NULL)?lf->dstip:"",
-            (lf->srcip   != NULL)?lf->srcip:"",
-            (lf->data    != NULL)?lf->data:""
-            );
+        elm_current,
+        (lf->dstuser != NULL)?lf->dstuser:"",
+        (lf->srcuser != NULL)?lf->srcuser:"",
+        (lf->dstip   != NULL)?lf->dstip:"",
+        (lf->srcip   != NULL)?lf->srcip:"",
+        (lf->data    != NULL)?lf->data:""
+    );
     if( result < 0 || result >= OS_ACM_MAXDATA) {
         // TODO: ERROR HERE
         debug1("accumulator: DEBUG: Error packing data for %s", _key);
@@ -326,14 +326,14 @@ int acm_str_replace(char **dst, const char* src) {
         return 0;
     }
 
-    int slen = strnlen(src, OS_ACM_MAXELM);
+    int slen = strnlen(src, OS_ACM_MAXELM - 1);
 
     if ( slen == 0 ) {
         return 0;
     }
 
     free(*dst);
-    *dst = malloc(slen); // This will be free'd by the FreeEvent function
+    *dst = malloc(slen + 1); // This will be free'd by the FreeEvent function
     if( *dst == NULL ) {
         debug2("something bad happend with malloc");
         return -1;
