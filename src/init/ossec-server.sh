@@ -48,9 +48,9 @@ checkpid()
             if [ ! $? = 0 ]; then
                 echo "Deleting PID file '${DIR}/var/run/${i}-${j}.pid' not used..."
                 rm ${DIR}/var/run/${i}-${j}.pid
-            fi    
-        done    
-    done    
+            fi
+        done
+    done
 }
 
 
@@ -59,7 +59,7 @@ checkpid()
 lock()
 {
     i=0;
-    
+
     # Providing a lock.
     while [ 1 ]; do
         mkdir ${LOCK} > /dev/null 2>&1
@@ -79,7 +79,7 @@ lock()
         if [ ! $? = 0 ]; then
             # Pid is not present.
             i=`expr $i + 1`;
-        fi    
+        fi
 
         # We tried 10 times to acquire the lock.
         if [ "$i" = "${MAX_ITERATION}" ]; then
@@ -99,7 +99,7 @@ unlock()
     rm -rf ${LOCK}
 }
 
-    
+
 # Help message
 help()
 {
@@ -119,15 +119,15 @@ enable()
         echo "Usage: $0 enable [database|client-syslog|agentless|debug]"
         exit 1;
     fi
-    
+
     if [ "X$2" = "Xdatabase" ]; then
         echo "DB_DAEMON=ossec-dbd" >> ${PLIST};
     elif [ "X$2" = "Xclient-syslog" ]; then
         echo "CSYSLOG_DAEMON=ossec-csyslogd" >> ${PLIST};
     elif [ "X$2" = "Xagentless" ]; then
-        echo "AGENTLESS_DAEMON=ossec-agentlessd" >> ${PLIST};    
-    elif [ "X$2" = "Xdebug" ]; then 
-        echo "DEBUG_CLI=\"-d\"" >> ${PLIST}; 
+        echo "AGENTLESS_DAEMON=ossec-agentlessd" >> ${PLIST};
+    elif [ "X$2" = "Xdebug" ]; then
+        echo "DEBUG_CLI=\"-d\"" >> ${PLIST};
     else
         echo ""
         echo "Invalid enable option."
@@ -135,9 +135,9 @@ enable()
         echo "Enable options: database, client-syslog, agentless, debug"
         echo "Usage: $0 enable [database|client-syslog|agentless|debug]"
         exit 1;
-    fi         
+    fi
 
-    
+
 }
 
 
@@ -151,15 +151,15 @@ disable()
         echo "Usage: $0 disable [database|client-syslog|agentless|debug]"
         exit 1;
     fi
-    
+
     if [ "X$2" = "Xdatabase" ]; then
         echo "DB_DAEMON=\"\"" >> ${PLIST};
     elif [ "X$2" = "Xclient-syslog" ]; then
         echo "CSYSLOG_DAEMON=\"\"" >> ${PLIST};
     elif [ "X$2" = "Xagentless" ]; then
-        echo "AGENTLESS_DAEMON=\"\"" >> ${PLIST};    
-    elif [ "X$2" = "Xdebug" ]; then 
-        echo "DEBUG_CLI=\"\"" >> ${PLIST}; 
+        echo "AGENTLESS_DAEMON=\"\"" >> ${PLIST};
+    elif [ "X$2" = "Xdebug" ]; then
+        echo "DEBUG_CLI=\"\"" >> ${PLIST};
     else
         echo ""
         echo "Invalid disable option."
@@ -167,9 +167,9 @@ disable()
         echo "Disable options: database, client-syslog, agentless, debug"
         echo "Usage: $0 disable [database|client-syslog|agentless|debug]"
         exit 1;
-    fi         
+    fi
 
-    
+
 }
 
 
@@ -192,32 +192,32 @@ status()
 
 testconfig()
 {
-    # We first loop to check the config. 
+    # We first loop to check the config.
     for i in ${SDAEMONS}; do
         ${DIR}/bin/${i} -t ${DEBUG_CLI};
         if [ $? != 0 ]; then
             echo "${i}: Configuration error. Exiting"
             unlock;
             exit 1;
-        fi    
+        fi
     done
 }
 
 # Start function
 start()
 {
-    SDAEMONS="${DB_DAEMON} ${CSYSLOG_DAEMON} ${AGENTLESS_DAEMON} ossec-maild ossec-execd ossec-analysisd ossec-logcollector ossec-remoted ossec-syscheckd ossec-monitord"
-    
+    SDAEMONS="${DB_DAEMON} ${AGENTLESS_DAEMON} ossec-maild ossec-execd ossec-analysisd ossec-logcollector ossec-remoted ossec-syscheckd ossec-monitord ${CSYSLOG_DAEMON}"
+
     echo "Starting $NAME $VERSION (by $AUTHOR)..."
     echo | ${DIR}/bin/ossec-logtest > /dev/null 2>&1;
     if [ ! $? = 0 ]; then
         echo "OSSEC analysisd: Testing rules failed. Configuration error. Exiting."
         exit 1;
-    fi    
+    fi
     lock;
     checkpid;
 
-    
+
     # We actually start them now.
     for i in ${SDAEMONS}; do
         pstatus ${i};
@@ -226,14 +226,14 @@ start()
             if [ $? != 0 ]; then
                 unlock;
                 exit 1;
-            fi 
+            fi
 
-            echo "Started ${i}..."            
+            echo "Started ${i}..."
         else
-            echo "${i} already running..."                
-        fi    
-    
-    done    
+            echo "${i} already running..."
+        fi
+
+    done
 
     # After we start we give 2 seconds for the daemons
     # to internally create their PID files.
@@ -246,12 +246,12 @@ start()
 pstatus()
 {
     pfile=$1;
-    
+
     # pfile must be set
     if [ "X${pfile}" = "X" ]; then
         return 0;
     fi
-        
+
     ls ${DIR}/var/run/${pfile}*.pid > /dev/null 2>&1
     if [ $? = 0 ]; then
         for j in `cat ${DIR}/var/run/${pfile}*.pid 2>/dev/null`; do
@@ -261,15 +261,15 @@ pstatus()
                 rm -f ${DIR}/var/run/${pfile}-$j.pid
                 continue;
             fi
-                
+
             kill -0 $j > /dev/null 2>&1
             if [ $? = 0 ]; then
                 return 1;
-            fi    
-        done    
+            fi
+        done
     fi
-    
-    return 0;    
+
+    return 0;
 }
 
 
@@ -282,16 +282,16 @@ stopa()
         pstatus ${i};
         if [ $? = 1 ]; then
             echo "Killing ${i} .. ";
-            
+
             kill `cat ${DIR}/var/run/${i}*.pid`;
         else
-            echo "${i} not running .."; 
+            echo "${i} not running ..";
         fi
-        
+
         rm -f ${DIR}/var/run/${i}*.pid
-        
-     done    
-    
+
+     done
+
     unlock;
     echo "$NAME $VERSION Stopped"
 }
@@ -304,7 +304,7 @@ case "$1" in
     testconfig
 	start
 	;;
-  stop) 
+  stop)
 	stopa
 	;;
   restart)
@@ -321,15 +321,15 @@ case "$1" in
   status)
     status
 	;;
-  help)  
+  help)
     help
     ;;
   enable)
     enable $1 $2;
-    ;;  
+    ;;
   disable)
     disable $1 $2;
-    ;;  
+    ;;
   *)
     help
 esac
