@@ -14,7 +14,7 @@ if [ "X$1" = "Xlocal" ]; then
     # Setting local install
     LOCAL="local"
 fi
-    
+
 UNAME=`uname`;
 
 # Getting default variables
@@ -25,18 +25,18 @@ USER_MAIL="ossecm"
 USER_REM="ossecr"
 subdirs="logs logs/archives logs/alerts logs/firewall bin stats rules queue queue/alerts queue/ossec queue/fts queue/syscheck queue/rootcheck queue/diff queue/agent-info queue/agentless queue/rids tmp var var/run etc etc/shared active-response active-response/bin agentless .ssh"
 
-# ${DIR} must be set 
+# ${DIR} must be set
 if [ "X${DIR}" = "X" ]; then
     echo "Error building OSSEC HIDS."
     exit 1;
-fi    
+fi
 
-    
+
 # Creating root directory
-ls ${DIR} > /dev/null 2>&1    
+ls ${DIR} > /dev/null 2>&1
 if [ $? != 0 ]; then mkdir -m 700 -p ${DIR}; fi
-ls ${DIR} > /dev/null 2>&1    
-if [ $? != 0 ]; then 
+ls ${DIR} > /dev/null 2>&1
+if [ $? != 0 ]; then
     echo "You do not have permissions to create ${DIR}. Exiting..."
     exit 1;
 fi
@@ -76,7 +76,7 @@ elif [ "$UNAME" = "AIX" ]; then
     /usr/sbin/useradd -d ${DIR} ${AIXSH} -g ${GROUP} ${USER_REM}
     fi
 
-# Thanks Chuck L. for the mac addusers    
+# Thanks Chuck L. for the mac addusers
 elif [ "$UNAME" = "Darwin" ]; then
     id -u ${USER} > /dev/null 2>&1
     if [ ! $? = 0 ]; then
@@ -88,9 +88,9 @@ elif [ "$UNAME" = "Darwin" ]; then
             ./init/osx105-addusers.sh
         else
             chmod +x ./init/darwin-addusers.pl
-            ./init/darwin-addusers.pl    
-        fi        
-    fi    
+            ./init/darwin-addusers.pl
+        fi
+    fi
 else
     grep "^${USER_REM}" /etc/passwd > /dev/null 2>&1
     if [ ! $? = 0 ]; then
@@ -105,8 +105,8 @@ else
         ls -la /bin/false > /dev/null 2>&1
         if [ $? = 0 ]; then
             OSMYSHELL="/bin/false"
-        fi    
-    fi    
+        fi
+    fi
 	/usr/sbin/useradd -d ${DIR} -s ${OSMYSHELL} -g ${GROUP} ${USER}
 	/usr/sbin/useradd -d ${DIR} -s ${OSMYSHELL} -g ${GROUP} ${USER_MAIL}
 	/usr/sbin/useradd -d ${DIR} -s ${OSMYSHELL} -g ${GROUP} ${USER_REM}
@@ -121,8 +121,10 @@ for i in ${subdirs}; do
 done
 
 # Default for all directories
-chmod -R 550 ${DIR}
-chown -R root:${GROUP} ${DIR}
+chmod 550 ${DIR}
+chmod 550 ${DIR}/*
+chown root:${GROUP} ${DIR}
+chown root:${GROUP} ${DIR}/*
 
 # AnalysisD needs to write to alerts: log, mail and cmds
 chown -R ${USER}:${GROUP} ${DIR}/queue/alerts
@@ -146,8 +148,9 @@ chown -R ${USER}:${GROUP} ${DIR}/queue/rootcheck
 chmod -R 750 ${DIR}/queue/rootcheck
 chmod 740 ${DIR}/queue/rootcheck/* > /dev/null 2>&1
 
-chown -R ${USER}:${GROUP} ${DIR}/queue/diff
-chmod -R 750 ${DIR}/queue/diff
+chown ${USER}:${GROUP} ${DIR}/queue/diff
+chown ${USER}:${GROUP} ${DIR}/queue/diff/*
+chmod 750 ${DIR}/queue/diff
 chmod 740 ${DIR}/queue/diff/* > /dev/null 2>&1
 
 chown -R ${USER_REM}:${GROUP} ${DIR}/queue/agent-info
@@ -183,21 +186,21 @@ ls ${DIR}/rules/*.xml > /dev/null 2>&1
 if [ $? = 0 ]; then
     mkdir ${DIR}/rules/backup-rules.$$
     cp -pr ${DIR}/rules/*.xml ${DIR}/rules/backup-rules.$$/
-    
+
     # Checking for the local rules
     ls ${DIR}/rules/local_rules.xml > /dev/null 2>&1
     if [ $? = 0 ]; then
         cp -pr ${DIR}/rules/local_rules.xml ${DIR}/rules/saved_local_rules.xml.$$
-    fi    
+    fi
 fi
-    
+
 cp -pr ../etc/rules/* ${DIR}/rules/
 
 # If the local_rules is saved, moved it back
 ls ${DIR}/rules/saved_local_rules.xml.$$ > /dev/null 2>&1
 if [ $? = 0 ]; then
     mv ${DIR}/rules/saved_local_rules.xml.$$ ${DIR}/rules/local_rules.xml
-fi    
+fi
 
 chown -R root:${GROUP} ${DIR}/rules
 chmod -R 550 ${DIR}/rules
@@ -210,7 +213,7 @@ ls /etc/localtime > /dev/null 2>&1
 if [ $? = 0 ]; then
     cp -pL /etc/localtime ${DIR}/etc/;
     chmod 555 ${DIR}/etc/localtime
-    chown root:${GROUP} ${DIR}/etc/localtime 
+    chown root:${GROUP} ${DIR}/etc/localtime
 fi
 
 # Solaris Needs some extra files
@@ -225,7 +228,7 @@ if [ $? = 0 ]; then
     cp -p /etc/TIMEZONE ${DIR}/etc/;
     chmod 555 ${DIR}/etc/TIMEZONE
 fi
-                        
+
 
 # For the /var/run
 chmod 770 ${DIR}/var/run
@@ -248,7 +251,7 @@ chmod +x ${DIR}/bin/util.sh
 # Local install chosen
 if [ "X$LOCAL" = "Xlocal" ]; then
     cp -pr ./init/ossec-local.sh ${DIR}/bin/ossec-control
-else    
+else
     cp -pr ./init/ossec-server.sh ${DIR}/bin/ossec-control
 fi
 
@@ -269,7 +272,7 @@ ls ${DIR}/etc/internal_options.conf > /dev/null 2>&1
 if [ $? = 0 ]; then
   cp -pr ${DIR}/etc/internal_options.conf ${DIR}/etc/backup-internal_options.$$
 fi
-  
+
 cp -pr ../etc/internal_options.conf ${DIR}/etc/
 cp -pr rootcheck/db/*.txt ${DIR}/etc/shared/
 chown root:${GROUP} ${DIR}/etc/decoder.xml
@@ -314,7 +317,7 @@ fi
 ls ../etc/ossec.mc > /dev/null 2>&1
 if [ $? = 0 ]; then
     cp -pr ../etc/ossec.mc ${DIR}/etc/ossec.conf
-else    
+else
     cp -pr ../etc/ossec-server.conf ${DIR}/etc/ossec.conf
 fi
 chown root:${GROUP} ${DIR}/etc/ossec.conf
