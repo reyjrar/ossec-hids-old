@@ -33,6 +33,7 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
     int s = 0;
     time_t tm;
     struct tm *p;
+    int tries = 0;
 
     file_queue *fileq;
     alert_data *al_data;
@@ -45,7 +46,16 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
 
     /* Initating file queue - to read the alerts */
     os_calloc(1, sizeof(file_queue), fileq);
-    Init_FileQueue(fileq, p, 0);
+    while( (Init_FileQueue(fileq, p, 0) ) <= 0 ) {
+        tries++;
+        if( tries > OS_CSYSLOGD_MAX_TRIES ) {
+            merror("%s: ERROR: Could not open queue after %d tries, exiting!",
+                   ARGV0, tries
+            );
+            exit(1);
+        }
+        sleep(1);
+    }
 
 
     /* Connecting to syslog. */
