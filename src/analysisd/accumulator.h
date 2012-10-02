@@ -28,18 +28,19 @@
 #define OS_ACM_MAXELM 81
 #define OS_ACM_MAXDATA 2048
 
-/* Accumulator Offsets */
-#define ACM_EXPIRE  0
-#define ACM_DSTUSER 1
-#define ACM_SRCUSER 2
-#define ACM_DSTIP   3
-#define ACM_SRCIP   4
-#define ACM_DATA    5
+typedef struct _OS_ACM_Store {
+    int timestamp;
+    char *dstuser;
+    char *srcuser;
+    char *dstip;
+    char *srcip;
+    char *data;
+} OS_ACM_Store;
 
 /* Accumulator Constants */
-#define ACM_EXPIRE_ELM      300
-#define ACM_PURGE_INTERVAL  600
-#define ACM_PURGE_COUNT     100
+#define OS_ACM_EXPIRE_ELM      300
+#define OS_ACM_PURGE_INTERVAL  600
+#define OS_ACM_PURGE_COUNT     100
 
 /* Accumulator Functions */
 int Accumulate_Init();
@@ -48,5 +49,6 @@ void Accumulate_CleanUp();
 
 /* Internal Functions */
 int acm_str_replace(char **dst, const char* src);
+void FreeACMStore(OS_ACM_Store *obj);
 
 #endif
