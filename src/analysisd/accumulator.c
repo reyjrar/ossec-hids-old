@@ -62,25 +62,16 @@ int Accumulate_Init()
 Eventinfo* Accumulate(Eventinfo *lf)
 {
     // Declare our variables
+    int result;
     int do_update = 0;
 
     char _key[OS_ACM_MAXKEY];
+    OS_ACM_Store *stored_data;
 
-    char *hash_line;
-    char hash_buffer[OS_ACM_MAXELM];
-    int  hash_field = 0;
-    int  hash_idx = 0;
-
-    char elm_dstuser[OS_ACM_MAXELM];
-    char elm_srcuser[OS_ACM_MAXELM];
-    char elm_dstip[OS_ACM_MAXELM];
-    char elm_srcip[OS_ACM_MAXELM];
-    char elm_data[OS_ACM_MAXELM];
-    char tmp_expire[OS_ACM_MAXELM];
-    int  elm_stored = 0;
-    int  elm_current = 0;
-    int  result = 0;
+    // Timing Variables
+    int  current_ts;
     struct timeval tp;
+
 
     // We need an ID to use the accumulator
     if( lf->id == NULL ) {
@@ -99,9 +90,6 @@ Eventinfo* Accumulate(Eventinfo *lf)
         return lf;
     }
 
-    // Accumulator Attempt
-    acm_lookups++;
-
     // Purge the cache as needed
     Accumulate_CleanUp();
 
@@ -109,18 +97,7 @@ Eventinfo* Accumulate(Eventinfo *lf)
 
     // Timing data
     gettimeofday(&tp, NULL);
-    elm_current = tp.tv_sec;
-
-    // Ensure elements are empty
-    memset(tmp_expire, 0,OS_ACM_MAXELM);
-    memset(elm_dstuser,0,OS_ACM_MAXELM);
-    memset(elm_srcuser,0,OS_ACM_MAXELM);
-    memset(elm_dstip,  0,OS_ACM_MAXELM);
-    memset(elm_srcip,  0,OS_ACM_MAXELM);
-    memset(elm_data,   0,OS_ACM_MAXELM);
-
-    // Ensure hash_buffer is empty
-    memset(hash_buffer, 0, OS_ACM_MAXELM);
+    current_ts = tp.tv_sec;
 
     /* Accumulator Key */
     result = snprintf(_key, OS_FLSIZE, "%s %s %s",
@@ -135,115 +112,66 @@ Eventinfo* Accumulate(Eventinfo *lf)
     }
 
     /** Checking if acm is already present **/
-    if((hash_line = (char *)OSHash_Get(acm_store, _key)) != NULL) {
+    if((stored_data = (OS_ACM_Store *)OSHash_Get(acm_store, _key)) != NULL) {
         debug2("accumulator: DEBUG: Lookup for '%s' found a stored value!", _key);
-        debug2("accumulator: DEBUG: That value is '%s'", hash_line);
         do_update = 1;
-        int i;
-        // Yes, we have to go past the last character to the \0
-        for ( i = 0; i <= strnlen(hash_line,OS_ACM_MAXELM); i++ ) {
-            // Skip new lines
-            if( hash_line[i] == '\r' || hash_line[i] == '\n' ) continue;
-            // Check to set values
-            if( hash_line[i] == '|' || hash_line[i] == '\0') {
-                switch( hash_field ) {
-                    case ACM_EXPIRE:
-                        result = strncpy(tmp_expire, hash_buffer, OS_ACM_MAXELM ) == NULL ? -1 : 0;
-                        break;
-                    case ACM_DSTUSER:
-                        result = strncpy(elm_dstuser, hash_buffer, OS_ACM_MAXELM ) == NULL ? -1 : 0;                        break;
-                        break;
-                    case ACM_SRCUSER:
-                        result = strncpy(elm_srcuser, hash_buffer, OS_ACM_MAXELM ) == NULL ? -1 : 0;                        break;
-                        break;
-                    case ACM_DSTIP:
-                        result = strncpy(elm_dstip, hash_buffer, OS_ACM_MAXELM ) == NULL ? -1 : 0;                        break;
-                        break;
-                    case ACM_SRCIP:
-                        result = strncpy(elm_srcip, hash_buffer, OS_ACM_MAXELM ) == NULL ? -1 : 0;                        break;
-                        break;
-                    case ACM_DATA:
-                        result = strncpy(elm_data, hash_buffer, OS_ACM_MAXELM ) == NULL ? -1 : 0;                        break;
-                        break;
-                    default:
-                        result = -2;
-                        break;
-                }
-                // Check the result of our operation
-                if( result == -1 ) {
-                    debug2("accumulator: DEBUG: Error bad field index -> %d", hash_field);
-                    break;
-                }
-                else if( result == -1 ) {
-                    debug2("accumulator: DEBUG: Error copying hash_buffer into a element %d", hash_field);
-                }
-                // Move on to the next field
-                hash_field++;
-                hash_idx=0;
-                memset(hash_buffer, 0, OS_ACM_MAXELM);
-            }
-            else {
-                hash_buffer[hash_idx] = hash_line[i];
-                hash_idx++;
+
+        if( stored_data->timestamp > 0 && stored_data->timestamp < current_ts - OS_ACM_EXPIRE_ELM ) {
+            OS_ACM_Store *del;
+            if( (del = OSHash_Delete(acm_store, _key)) != NULL ) {
+                debug1("accumulator: DEBUG: Deleted expired hash entry for '%s'", _key);
+                FreeACMStore(del);
+                FreeACMStore(stored_data);
             }
         }
-        if( strnlen(tmp_expire, OS_ACM_MAXELM) > 0 ) {
-            elm_stored = atoi(tmp_expire);
-            if( elm_stored > 0 && elm_stored < elm_current - ACM_EXPIRE_ELM ) {
-                char* del;
-                if( (del = OSHash_Delete(acm_store, _key)) != NULL ) {
-                    debug1("accumulator: DEBUG: Deleted expired hash entry for '%s'", _key);
-                    free(del);
-                }
-            }
+        else {
+            // Update the event
+            if (acm_str_replace(&lf->dstuser,stored_data->dstuser) == 0)
+                debug2("accumulator: DEBUG: (%s) updated lf->dstuser to %s", _key, lf->dstuser);
+
+            if (acm_str_replace(&lf->srcuser,stored_data->srcuser) == 0)
+                debug2("accumulator: DEBUG: (%s) updated lf->srcuser to %s", _key, lf->srcuser);
+
+            if (acm_str_replace(&lf->dstip,stored_data->dstip) == 0)
+                debug2("accumulator: DEBUG: (%s) updated lf->dstip to %s", _key, lf->dstip);
+
+            if (acm_str_replace(&lf->srcip,stored_data->srcip) == 0)
+                debug2("accumulator: DEBUG: (%s) updated lf->srcip to %s", _key, lf->srcip);
+
+            if (acm_str_replace(&lf->data,stored_data->data) == 0)
+                debug2("accumulator: DEBUG: (%s) updated lf->data to %s", _key, lf->data);
         }
     }
-
-    if( elm_stored > 0 && elm_stored >= elm_current - ACM_EXPIRE_ELM ) {
-        // Update the event
-        if (acm_str_replace(&lf->dstuser,elm_dstuser) == 0)
-            debug2("accumulator: DEBUG: (%s) updated dstuser to %s", _key, lf->dstuser);
-
-        if (acm_str_replace(&lf->srcuser,elm_srcuser) == 0)
-            debug2("accumulator: DEBUG: (%s) updated srcuser to %s", _key, lf->srcuser);
-
-        if (acm_str_replace(&lf->dstip,elm_dstip) == 0)
-            debug2("accumulator: DEBUG: (%s) updated dstip to %s", _key, lf->dstip);
-
-        if (acm_str_replace(&lf->srcip,elm_srcip) == 0)
-            debug2("accumulator: DEBUG: (%s) updated srcip to %s", _key, lf->srcip);
-
-        if (acm_str_replace(&lf->data,elm_data) == 0)
-            debug2("accumulator: DEBUG: (%s) updated data to %s", _key, lf->data);
+    if ( stored_data == NULL ) {
+        os_malloc(sizeof(OS_ACM_Store), stored_data);
     }
 
-    // Setup the data for storage
-    char* data = malloc(OS_ACM_MAXDATA);
-    result = snprintf(data, OS_ACM_MAXDATA, "%d|%s|%s|%s|%s|%s",
-        elm_current,
-        (lf->dstuser != NULL)?lf->dstuser:"",
-        (lf->srcuser != NULL)?lf->srcuser:"",
-        (lf->dstip   != NULL)?lf->dstip:"",
-        (lf->srcip   != NULL)?lf->srcip:"",
-        (lf->data    != NULL)?lf->data:""
-    );
-    if( result < 0 || result >= OS_ACM_MAXDATA) {
-        // TODO: ERROR HERE
-        debug1("accumulator: DEBUG: Error packing data for %s", _key);
-        return lf;
-    }
-    else {
-        debug2("accumulator: DEBUG: SET '%s' => %s", _key, data);
-    }
+    // Store the object in the cache
+    stored_data->timestamp = current_ts;
+    if (acm_str_replace(&stored_data->dstuser,lf->dstuser) == 0)
+        debug2("accumulator: DEBUG: (%s) updated stored_data->dstuser to %s", _key, lf->dstuser);
+
+    if (acm_str_replace(&stored_data->srcuser,lf->srcuser) == 0)
+        debug2("accumulator: DEBUG: (%s) updated stored_data->srcuser to %s", _key, lf->srcuser);
+
+    if (acm_str_replace(&stored_data->dstip,lf->dstip) == 0)
+        debug2("accumulator: DEBUG: (%s) updated stored_data->dstip to %s", _key, lf->dstip);
+
+    if (acm_str_replace(&stored_data->srcip,lf->srcip) == 0)
+        debug2("accumulator: DEBUG: (%s) updated stored_data->srcip to %s", _key, lf->srcip);
+
+    if (acm_str_replace(&stored_data->data,lf->data) == 0)
+        debug2("accumulator: DEBUG: (%s) updated stored_data->data to %s", _key, lf->data);
+
     // Update or Add to the hash
     if( do_update == 1 ) {
         // Update the hash entry
-        if(OSHash_Update(acm_store, _key, data) <= 1) {
+        if(OSHash_Update(acm_store, _key, stored_data) <= 1) {
             debug2("accumulator: DEBUG: Updated stored data for %s", _key);
         }
     }
     else {
-        if(OSHash_Add(acm_store, _key, data) <= 1) {
+        if(OSHash_Add(acm_store, _key, stored_data) <= 1) {
             debug2("accumulator: DEBUG: Updated stored data for %s", _key);
         }
     }
@@ -257,18 +185,19 @@ void Accumulate_CleanUp() {
     int expired = 0;
 
     OSHashNode *curr;
-    char tmp_expire[OS_ACM_MAXELM];
-    int  elm_expire = 0;
-    char *data;
+    OS_ACM_Store *stored_data;
     char *key;
     int ti;
+
+    // Keep track of how many times we're called
+    acm_lookups++;
 
     // Initialize Variables
     gettimeofday(&tp, NULL);
     current_ts = tp.tv_sec;
 
     // Do we really need to purge?
-    if( acm_lookups < ACM_PURGE_COUNT && acm_purge_ts < current_ts + ACM_PURGE_INTERVAL ) {
+    if( acm_lookups < OS_ACM_PURGE_COUNT && acm_purge_ts < current_ts + OS_ACM_PURGE_INTERVAL ) {
         return;
     }
     debug1("accumulator: DEBUG: Accumulator_CleanUp() running .. ");
@@ -281,31 +210,18 @@ void Accumulate_CleanUp() {
     for ( ti = 0; ti < acm_store->rows; ti++ ) {
         curr = acm_store->table[ti];
         while( curr != NULL ) {
-            data = (char *) curr->data;
+            stored_data = (OS_ACM_Store *) curr->data;
             key  = (char *) curr->key;
-            debug2("accumulator: DEBUG: CleanUp() evaluating cache: %s => %s", key, data);
+            debug2("accumulator: DEBUG: CleanUp() evaluating cached key: %s ", key);
             /* check for a valid element */
-            if( data != NULL && strnlen(data, OS_ACM_MAXELM) > 0 ) {
-                memset(tmp_expire, 0, OS_ACM_MAXELM);
-                elm_expire = 0;
-                int i;
-                for ( i = 0; i < OS_ACM_MAXELM + 1; i ++ ) {
-                    if( data[i] == '|' ) {
-                        // First Bar, read expire
-                        elm_expire = atoi(tmp_expire);
-                        break;
-                    }
-                    else {
-                        tmp_expire[i] = data[i];
-                    }
-                }
+            if( stored_data != NULL ) {
                 /* Check for expiration */
-                debug2("accumulator: DEBUG: CleanUp() elm:%d, curr:%d", elm_expire, current_ts);
-                if( elm_expire < current_ts - ACM_EXPIRE_ELM ) {
+                debug2("accumulator: DEBUG: CleanUp() elm:%d, curr:%d", stored_data->timestamp, current_ts);
+                if( stored_data->timestamp < current_ts - OS_ACM_EXPIRE_ELM ) {
                     debug2("accumulator: DEBUG: CleanUp() Expiring '%s'", key);
-                    char* del;
+                    OS_ACM_Store* del;
                     if( (del = OSHash_Delete(acm_store, key)) != NULL ) {
-                        free(del);
+                        FreeACMStore(del);
                         expired++;
                     }
                     else {
@@ -317,6 +233,17 @@ void Accumulate_CleanUp() {
         }
     }
     debug2("accumulator: DEBUG: Expired %d elements", expired);
+}
+
+void FreeACMStore(OS_ACM_Store *obj) {
+    if( obj != NULL ) {
+        free(obj->dstuser);
+        free(obj->srcuser);
+        free(obj->dstip);
+        free(obj->srcip);
+        free(obj->data);
+        free(obj);
+    }
 }
 
 int acm_str_replace(char **dst, const char* src) {
