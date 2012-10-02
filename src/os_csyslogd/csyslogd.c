@@ -46,7 +46,7 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
 
     /* Initating file queue - to read the alerts */
     os_calloc(1, sizeof(file_queue), fileq);
-    while( (Init_FileQueue(fileq, p, 0) ) <= 0 ) {
+    while( (Init_FileQueue(fileq, p, 0) ) < 0 ) {
         tries++;
         if( tries > OS_CSYSLOGD_MAX_TRIES ) {
             merror("%s: ERROR: Could not open queue after %d tries, exiting!",
@@ -56,6 +56,7 @@ void OS_CSyslogD(SyslogConfig **syslog_config)
         }
         sleep(1);
     }
+    merror("%s: INFO: File queue connected.", ARGV0 );
 
 
     /* Connecting to syslog. */
