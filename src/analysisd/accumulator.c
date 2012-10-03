@@ -172,7 +172,7 @@ Eventinfo* Accumulate(Eventinfo *lf)
     }
     else {
         if(OSHash_Add(acm_store, _key, stored_data) <= 1) {
-            debug2("accumulator: DEBUG: Updated stored data for %s", _key);
+            debug2("accumulator: DEBUG: Added stored data for %s", _key);
         }
     }
 
