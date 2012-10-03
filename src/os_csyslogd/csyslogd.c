@@ -159,24 +159,26 @@ int field_add_truncated(char *dest, int size, const char *format, const char *va
                 ((value[0] != 'u') && (value[1] != 'n') && (value[4] != 'k'))
             )
     ) {
-        if( (truncated=malloc(field_sz)) == NULL ) {
-            // Memory error
-            return -3;
-        }
+        if( (truncated=malloc(field_sz + 1)) != NULL ) {
+            if( total_sz > available_sz ) {
+                // Truncate and add a trailer
+                os_substr(truncated, value, 0, field_sz - strlen(trailer));
+                strcat(truncated, trailer);
+            }
+            else {
+                strncpy(truncated,value,field_sz);
+            }
 
-        if( total_sz > available_sz ) {
-            // Truncate and add a trailer
-            os_substr(truncated, value, 0, field_sz - strlen(trailer) - 1);
-            strcat(truncated, trailer);
+            len = snprintf(buffer, available_sz, format, truncated);
+            strncat(dest, buffer, available_sz);
         }
         else {
-            strncpy(truncated,value,field_sz);
+            // Memory Error
+            len = -3;
         }
-
-        len = snprintf(buffer, available_sz, format, truncated);
-        strncat(dest, buffer, available_sz);
-        free(truncated);
     }
+    // Free the temporary pointer
+    free(truncated);
 
     return len;
 }
