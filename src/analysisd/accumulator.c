@@ -21,7 +21,6 @@
 #include "accumulator.h"
 #include "eventinfo.h"
 
-OSList *acm_list = NULL;
 OSHash *acm_store = NULL;
 
 // Counters for Purging
@@ -75,17 +74,14 @@ Eventinfo* Accumulate(Eventinfo *lf)
 
     // We need an ID to use the accumulator
     if( lf->id == NULL ) {
-        // TODO: ERROR HERE
         debug1("accumulator: DEBUG: No id available");
         return lf;
     }
     if( lf->decoder_info == NULL ) {
-        // TODO: ERROR HERE
         debug1("accumulator: DEBUG: No decoder_info available");
         return lf;
     }
     if( lf->decoder_info->name == NULL ) {
-        // TODO: ERROR HERE
         debug1("accumulator: DEBUG: No decoder name available");
         return lf;
     }
@@ -106,7 +102,6 @@ Eventinfo* Accumulate(Eventinfo *lf)
             lf->id
             );
     if( result < 0 || result >= sizeof(_key) ) {
-        // TODO: ERROR HERE
         debug1("accumulator: DEBUG: error setting accumulator key, id:%s,name:%s", lf->id, lf->decoder_info->name);
         return lf;
     }
@@ -114,18 +109,17 @@ Eventinfo* Accumulate(Eventinfo *lf)
     /** Checking if acm is already present **/
     if((stored_data = (OS_ACM_Store *)OSHash_Get(acm_store, _key)) != NULL) {
         debug2("accumulator: DEBUG: Lookup for '%s' found a stored value!", _key);
-        do_update = 1;
 
         if( stored_data->timestamp > 0 && stored_data->timestamp < current_ts - OS_ACM_EXPIRE_ELM ) {
             OS_ACM_Store *del;
             if( (del = OSHash_Delete(acm_store, _key)) != NULL ) {
                 debug1("accumulator: DEBUG: Deleted expired hash entry for '%s'", _key);
                 FreeACMStore(del);
-                FreeACMStore(stored_data);
             }
         }
         else {
             // Update the event
+            do_update = 1;
             if (acm_str_replace(&lf->dstuser,stored_data->dstuser) == 0)
                 debug2("accumulator: DEBUG: (%s) updated lf->dstuser to %s", _key, lf->dstuser);
 
@@ -138,30 +132,42 @@ Eventinfo* Accumulate(Eventinfo *lf)
             if (acm_str_replace(&lf->srcip,stored_data->srcip) == 0)
                 debug2("accumulator: DEBUG: (%s) updated lf->srcip to %s", _key, lf->srcip);
 
+            if (acm_str_replace(&lf->dstport,stored_data->dstport) == 0)
+                debug2("accumulator: DEBUG: (%s) updated lf->dstport to %s", _key, lf->dstport);
+
+            if (acm_str_replace(&lf->srcport,stored_data->srcport) == 0)
+                debug2("accumulator: DEBUG: (%s) updated lf->srcport to %s", _key, lf->srcport);
+
             if (acm_str_replace(&lf->data,stored_data->data) == 0)
                 debug2("accumulator: DEBUG: (%s) updated lf->data to %s", _key, lf->data);
         }
     }
-    if ( stored_data == NULL ) {
-        os_malloc(sizeof(OS_ACM_Store), stored_data);
+    if( stored_data == NULL ) {
+        stored_data = InitACMStore();
     }
 
     // Store the object in the cache
     stored_data->timestamp = current_ts;
     if (acm_str_replace(&stored_data->dstuser,lf->dstuser) == 0)
-        debug2("accumulator: DEBUG: (%s) updated stored_data->dstuser to %s", _key, lf->dstuser);
+        debug2("accumulator: DEBUG: (%s) updated stored_data->dstuser to %s", _key, stored_data->dstuser);
 
     if (acm_str_replace(&stored_data->srcuser,lf->srcuser) == 0)
-        debug2("accumulator: DEBUG: (%s) updated stored_data->srcuser to %s", _key, lf->srcuser);
+        debug2("accumulator: DEBUG: (%s) updated stored_data->srcuser to %s", _key, stored_data->srcuser);
 
     if (acm_str_replace(&stored_data->dstip,lf->dstip) == 0)
-        debug2("accumulator: DEBUG: (%s) updated stored_data->dstip to %s", _key, lf->dstip);
+        debug2("accumulator: DEBUG: (%s) updated stored_data->dstip to %s", _key, stored_data->dstip);
 
     if (acm_str_replace(&stored_data->srcip,lf->srcip) == 0)
-        debug2("accumulator: DEBUG: (%s) updated stored_data->srcip to %s", _key, lf->srcip);
+        debug2("accumulator: DEBUG: (%s) updated stored_data->srcip to %s", _key, stored_data->srcip);
+
+    if (acm_str_replace(&stored_data->dstport,lf->dstport) == 0)
+        debug2("accumulator: DEBUG: (%s) updated stored_data->dstport to %s", _key, stored_data->dstport);
+
+    if (acm_str_replace(&stored_data->srcport,lf->srcport) == 0)
+        debug2("accumulator: DEBUG: (%s) updated stored_data->srcport to %s", _key, stored_data->srcport);
 
     if (acm_str_replace(&stored_data->data,lf->data) == 0)
-        debug2("accumulator: DEBUG: (%s) updated stored_data->data to %s", _key, lf->data);
+        debug2("accumulator: DEBUG: (%s) updated stored_data->data to %s", _key, stored_data->data);
 
     // Update or Add to the hash
     if( do_update == 1 ) {
@@ -235,38 +241,62 @@ void Accumulate_CleanUp() {
     debug2("accumulator: DEBUG: Expired %d elements", expired);
 }
 
+/* Initialize an storage object */
+OS_ACM_Store * InitACMStore() {
+    OS_ACM_Store *obj;
+    os_calloc(1, sizeof(OS_ACM_Store), obj);
+
+    obj->timestamp = 0;
+    obj->srcuser = NULL;
+    obj->dstuser = NULL;
+    obj->srcip = NULL;
+    obj->dstip = NULL;
+    obj->srcport = NULL;
+    obj->dstport = NULL;
+    obj->data = NULL;
+
+    return obj;
+}
+
+/* Free an accumulation store struct */
 void FreeACMStore(OS_ACM_Store *obj) {
     if( obj != NULL ) {
+        debug2("accumulator: DEBUG: Freeing an accumulator struct.");
         free(obj->dstuser);
         free(obj->srcuser);
         free(obj->dstip);
         free(obj->srcip);
+        free(obj->dstport);
+        free(obj->srcport);
         free(obj->data);
         free(obj);
     }
 }
 
-int acm_str_replace(char **dst, const char* src) {
+int acm_str_replace(char **dst, const char *src) {
     int result = 0;
 
-    if( src == NULL || (dst != NULL && *dst != NULL && **dst != '\0') ) {
+    // Don't overwrite with a null str
+    if( src == NULL ) {
         return 0;
     }
 
-    int slen = strnlen(src, OS_ACM_MAXELM - 1);
+    // Don't overwrite something we already know
+    if (dst != NULL && *dst != NULL && **dst != '\0') {
+        return 0;
+    }
 
+    // Make sure we have data to write
+    int slen = strnlen(src, OS_ACM_MAXELM - 1);
     if ( slen == 0 ) {
         return 0;
     }
 
+    // Free dst, and malloc the memory we need!
     free(*dst);
-    *dst = malloc(slen + 1); // This will be free'd by the FreeEvent function
-    if( *dst == NULL ) {
-        debug2("something bad happend with malloc");
-        return -1;
-    }
+    os_malloc(slen+1, *dst);
 
-    result = strncpy(*dst, src, strnlen(src, OS_ACM_MAXELM)) == NULL ? -1 : 0;
+    result = strncpy(*dst, src, slen+1) == NULL ? -1 : 0;
     if (result < 0)
         debug1("accumulator: DEBUG: error in acm_str_replace()");
     return result;

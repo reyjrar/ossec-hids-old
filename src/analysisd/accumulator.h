@@ -34,6 +34,8 @@ typedef struct _OS_ACM_Store {
     char *srcuser;
     char *dstip;
     char *srcip;
+    char *dstport;
+    char *srcport;
     char *data;
 } OS_ACM_Store;
 
@@ -49,6 +51,7 @@ void Accumulate_CleanUp();
 
 /* Internal Functions */
 int acm_str_replace(char **dst, const char* src);
+OS_ACM_Store *InitACMStore();
 void FreeACMStore(OS_ACM_Store *obj);
 
 #endif

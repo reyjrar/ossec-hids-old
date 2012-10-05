@@ -205,7 +205,6 @@ int OSHash_Update(OSHash *self, char *key, void *data)
         /* Checking for duplicated key -- not adding */
         if(strcmp(curr_node->key, key) == 0)
         {
-            free(curr_node->data);
             curr_node->data = data;
             return(1);
         }

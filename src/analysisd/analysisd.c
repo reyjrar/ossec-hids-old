@@ -586,9 +586,8 @@ void OS_ReadMSG_analysisd(int m_queue)
 
     /* Initialize the Accumulator */
     if(!Accumulate_Init()) {
-        // TODO: Fix this error code
-        debug1("accumulator: DEBUG: Initialization failed");
-        //ErrorExit(FTS_LIST_ERROR, ARGV0);
+        merror("accumulator: ERROR: Initialization failed");
+        exit(1);
     }
 
     /* Starting the active response queues */
