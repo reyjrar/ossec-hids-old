@@ -34,6 +34,8 @@ typedef struct _OS_ACM_Store {
     char *srcuser;
     char *dstip;
     char *srcip;
+    char *dstport;
+    char *srcport;
     char *data;
 } OS_ACM_Store;
 
