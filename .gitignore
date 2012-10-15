@@ -2,6 +2,7 @@
 *.o
 *.a
 *.dSYM
+.DS_Store
 
 # Auto generated build files
 src/LOCATION

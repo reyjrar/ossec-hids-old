@@ -159,6 +159,7 @@ int field_add_truncated(char *dest, int size, const char *format, const char *va
                 ((value[0] != 'u') && (value[1] != 'n') && (value[4] != 'k'))
             )
     ) {
+
         if( (truncated=malloc(field_sz + 1)) != NULL ) {
             if( total_sz > available_sz ) {
                 // Truncate and add a trailer
