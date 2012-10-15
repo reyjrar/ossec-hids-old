@@ -72,6 +72,11 @@ Eventinfo* Accumulate(Eventinfo *lf)
     struct timeval tp;
 
 
+    // Check to make sure lf is valid
+    if ( lf == NULL ) {
+        debug1("accumulator: DEBUG: Received NULL EventInfo");
+        return lf;
+    }
     // We need an ID to use the accumulator
     if( lf->id == NULL ) {
         debug1("accumulator: DEBUG: No id available");
@@ -278,18 +283,18 @@ int acm_str_replace(char **dst, const char *src) {
 
     // Don't overwrite with a null str
     if( src == NULL ) {
-        return 0;
+        return -1;
     }
 
     // Don't overwrite something we already know
     if (dst != NULL && *dst != NULL && **dst != '\0') {
-        return 0;
+        return -1;
     }
 
     // Make sure we have data to write
     int slen = strnlen(src, OS_ACM_MAXELM - 1);
     if ( slen == 0 ) {
-        return 0;
+        return -1;
     }
 
     // Free dst, and malloc the memory we need!
