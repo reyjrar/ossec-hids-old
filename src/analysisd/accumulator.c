@@ -65,7 +65,7 @@ Eventinfo* Accumulate(Eventinfo *lf)
     int do_update = 0;
 
     char _key[OS_ACM_MAXKEY];
-    OS_ACM_Store *stored_data;
+    OS_ACM_Store *stored_data = 0;
 
     // Timing Variables
     int  current_ts;
@@ -116,10 +116,12 @@ Eventinfo* Accumulate(Eventinfo *lf)
         debug2("accumulator: DEBUG: Lookup for '%s' found a stored value!", _key);
 
         if( stored_data->timestamp > 0 && stored_data->timestamp < current_ts - OS_ACM_EXPIRE_ELM ) {
-            OS_ACM_Store *del;
-            if( (del = OSHash_Delete(acm_store, _key)) != NULL ) {
+            if( OSHash_Delete(acm_store, _key) != NULL ) {
                 debug1("accumulator: DEBUG: Deleted expired hash entry for '%s'", _key);
-                FreeACMStore(del);
+                // Clear this memory
+                FreeACMStore(stored_data);
+                // Reallocate what we need
+                stored_data = InitACMStore();
             }
         }
         else {
@@ -147,7 +149,7 @@ Eventinfo* Accumulate(Eventinfo *lf)
                 debug2("accumulator: DEBUG: (%s) updated lf->data to %s", _key, lf->data);
         }
     }
-    if( stored_data == NULL ) {
+    else {
         stored_data = InitACMStore();
     }
 
@@ -292,8 +294,8 @@ int acm_str_replace(char **dst, const char *src) {
     }
 
     // Make sure we have data to write
-    int slen = strnlen(src, OS_ACM_MAXELM - 1);
-    if ( slen == 0 ) {
+    int slen = strlen(src);
+    if ( slen <= 0  || slen > OS_ACM_MAXELM - 1 ) {
         return -1;
     }
 
@@ -301,7 +303,7 @@ int acm_str_replace(char **dst, const char *src) {
     free(*dst);
     os_malloc(slen+1, *dst);
 
-    result = strncpy(*dst, src, slen+1) == NULL ? -1 : 0;
+    result = strcpy(*dst, src) == NULL ? -1 : 0;
     if (result < 0)
         debug1("accumulator: DEBUG: error in acm_str_replace()");
     return result;

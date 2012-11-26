@@ -525,6 +525,7 @@ void OS_ReadMSG(int m_queue, char *ut_str)
 
             /* Run accumulator */
             if( lf->decoder_info->accumulate == 1 ) {
+                print_out("\n**ACCUMULATOR: LEVEL UP!!**\n");
                 lf = Accumulate(lf);
             }
 

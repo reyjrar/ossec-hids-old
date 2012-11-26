@@ -330,7 +330,7 @@ void *OSHash_Get(OSHash *self, char *key)
 void* OSHash_Delete(OSHash *self, char *key)
 {
     OSHashNode *curr_node;
-    OSHashNode *prev_node;
+    OSHashNode *prev_node = 0;
     unsigned int hash_key;
     unsigned int index;
     void *data;
