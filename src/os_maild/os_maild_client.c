@@ -29,6 +29,8 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
 {
     int i = 0, body_size = OS_MAXSTR -3, log_size, sms_set = 0,donotgroup = 0;
     char logs[OS_MAXSTR + 1];
+    char extra_data[OS_MAXSTR + 1];
+    char log_string[OS_MAXSTR / 4 + 1];
     char *subject_host;
 #ifdef GEOIP
     char geoip_msg_src[OS_SIZE_1024 +1];
@@ -55,6 +57,7 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
 
     /* Generating the logs */
     logs[0] = '\0';
+    extra_data[0] = '\0';
     logs[OS_MAXSTR] = '\0';
 
     while(al_data->log[i])
@@ -73,7 +76,7 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
         i++;
     }
 
-    if (al_data->old_md5) 
+    if (al_data->old_md5)
     {
         log_size = strlen(al_data->old_md5) + 16 + 4;
         if(body_size > log_size)
@@ -84,7 +87,7 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
             body_size -= log_size;
         }
     }
-    if (al_data->new_md5) 
+    if (al_data->new_md5)
     {
         log_size = strlen(al_data->new_md5) + 16 + 4;
         if(body_size > log_size)
@@ -95,7 +98,7 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
             body_size -= log_size;
         }
     }
-    if (al_data->old_sha1) 
+    if (al_data->old_sha1)
     {
         log_size = strlen(al_data->old_sha1) + 17 + 4;
         if(body_size > log_size)
@@ -106,7 +109,7 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
             body_size -= log_size;
         }
     }
-    if (al_data->new_sha1) 
+    if (al_data->new_sha1)
     {
         log_size = strlen(al_data->new_sha1) + 17 + 4;
         if(body_size > log_size)
@@ -117,6 +120,36 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
             body_size -= log_size;
         }
     }
+
+    /* EXTRA DATA */
+    if(al_data->srcip)
+    {
+        log_size = snprintf(log_string, sizeof(log_string)-1, "Src IP: %s\r\n", al_data->srcip );
+        if(body_size > log_size) {
+           if( strncat(extra_data, log_string, log_size) != NULL ) {
+                body_size -= log_size;
+           }
+        }
+    }
+    if(al_data->dstip)
+    {
+        log_size = snprintf(log_string, sizeof(log_string)-1, "Dst IP: %s\r\n", al_data->dstip );
+        if(body_size > log_size) {
+           if( strncat(extra_data, log_string, log_size) != NULL ) {
+                body_size -= log_size;
+           }
+        }
+    }
+    if(al_data->user)
+    {
+        log_size = snprintf(log_string, sizeof(log_string)-1, "User: %s\r\n", al_data->user );
+        if(body_size > log_size) {
+           if( strncat(extra_data, log_string, log_size) != NULL ) {
+                body_size -= log_size;
+           }
+        }
+    }
+
 
 
     /* Subject */
@@ -187,6 +220,7 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
             al_data->comment,
             geoip_msg_src,
             geoip_msg_dst,
+            extra_data,
             logs);
 #else
     snprintf(mail->body, BODY_SIZE -1, MAIL_BODY,
@@ -195,6 +229,7 @@ MailMsg *OS_RecvMailQ(file_queue *fileq, struct tm *p,
             al_data->rule,
             al_data->level,
             al_data->comment,
+            extra_data,
             logs);
 #endif
     debug2("OS_RecvMailQ: mail->body[%s]", mail->body);
