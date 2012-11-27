@@ -79,7 +79,7 @@ Eventinfo* Accumulate(Eventinfo *lf)
     }
     // We need an ID to use the accumulator
     if( lf->id == NULL ) {
-        debug1("accumulator: DEBUG: No id available");
+        debug2("accumulator: DEBUG: No id available");
         return lf;
     }
     if( lf->decoder_info == NULL ) {
@@ -179,13 +179,19 @@ Eventinfo* Accumulate(Eventinfo *lf)
     // Update or Add to the hash
     if( do_update == 1 ) {
         // Update the hash entry
-        if(OSHash_Update(acm_store, _key, stored_data) <= 1) {
-            debug2("accumulator: DEBUG: Updated stored data for %s", _key);
+        if( (result = OSHash_Update(acm_store, _key, stored_data)) != 1) {
+            verbose("accumulator: ERROR: Update of stored data for %s failed (%d).", _key, result);
+        }
+        else {
+            debug1("accumulator: DEBUG: Updated stored data for %s", _key);
         }
     }
     else {
-        if(OSHash_Add(acm_store, _key, stored_data) <= 1) {
-            debug2("accumulator: DEBUG: Added stored data for %s", _key);
+        if((result = OSHash_Add(acm_store, _key, stored_data)) != 2 ) {
+            verbose("accumulator: ERROR: Addition of stored data for %s failed (%d).", _key, result);
+        }
+        else {
+            debug1("accumulator: DEBUG: Added stored data for %s", _key);
         }
     }
 
@@ -223,8 +229,12 @@ void Accumulate_CleanUp() {
     for ( ti = 0; ti < acm_store->rows; ti++ ) {
         curr = acm_store->table[ti];
         while( curr != NULL ) {
-            stored_data = (OS_ACM_Store *) curr->data;
+            // Get the Key and Data
             key  = (char *) curr->key;
+            stored_data = (OS_ACM_Store *) curr->data;
+            // Increment to the next element
+            curr = curr->next;
+
             debug2("accumulator: DEBUG: CleanUp() evaluating cached key: %s ", key);
             /* check for a valid element */
             if( stored_data != NULL ) {
@@ -232,9 +242,8 @@ void Accumulate_CleanUp() {
                 debug2("accumulator: DEBUG: CleanUp() elm:%d, curr:%d", stored_data->timestamp, current_ts);
                 if( stored_data->timestamp < current_ts - OS_ACM_EXPIRE_ELM ) {
                     debug2("accumulator: DEBUG: CleanUp() Expiring '%s'", key);
-                    OS_ACM_Store* del;
-                    if( (del = OSHash_Delete(acm_store, key)) != NULL ) {
-                        FreeACMStore(del);
+                    if( OSHash_Delete(acm_store, key) != NULL ) {
+                        FreeACMStore(stored_data);
                         expired++;
                     }
                     else {
@@ -242,10 +251,9 @@ void Accumulate_CleanUp() {
                     }
                 }
             }
-            curr = curr->next;
         }
     }
-    debug2("accumulator: DEBUG: Expired %d elements", expired);
+    debug1("accumulator: DEBUG: Expired %d elements", expired);
 }
 
 /* Initialize an storage object */

@@ -40,9 +40,9 @@ typedef struct _OS_ACM_Store {
 } OS_ACM_Store;
 
 /* Accumulator Constants */
-#define OS_ACM_EXPIRE_ELM      300
-#define OS_ACM_PURGE_INTERVAL  600
-#define OS_ACM_PURGE_COUNT     100
+#define OS_ACM_EXPIRE_ELM      120
+#define OS_ACM_PURGE_INTERVAL  300
+#define OS_ACM_PURGE_COUNT     200
 
 /* Accumulator Functions */
 int Accumulate_Init();
