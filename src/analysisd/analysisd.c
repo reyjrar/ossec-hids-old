@@ -712,6 +712,8 @@ void OS_ReadMSG_analysisd(int m_queue)
 
     debug1("%s: DEBUG: Startup completed. Waiting for new messages..",ARGV0);
 
+    if(Config.custom_alert_output)
+      debug1("%s: INFO: Custom output found.!",ARGV0);
 
     /* Daemon loop */
     while(1)
@@ -908,7 +910,15 @@ void OS_ReadMSG_analysisd(int m_queue)
                     if(stats_rule->alert_opts & DO_LOGALERT)
                     {
                         __crt_ftell = ftell(_aflog);
-                        OS_Log(lf);
+                        if(Config.custom_alert_output)
+                        {
+                          OS_CustomLog(lf,Config.custom_alert_output_format);
+                        }
+                        else
+                        {
+                          OS_Log(lf);
+                        }
+
                     }
 
 
@@ -1015,7 +1025,15 @@ void OS_ReadMSG_analysisd(int m_queue)
                 if(currently_rule->alert_opts & DO_LOGALERT)
                 {
                     __crt_ftell = ftell(_aflog);
-                    OS_Log(lf);
+
+                    if(Config.custom_alert_output)
+                    {
+                      OS_CustomLog(lf,Config.custom_alert_output_format);
+                    }
+                    else
+                    {
+                      OS_Log(lf);
+                    }
                 }
 
 
