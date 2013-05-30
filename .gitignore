@@ -13,6 +13,7 @@ src/isbigendian.c
 src/analysisd/compiled_rules/compiled_rules.h
 src/os_auth/agent-auth
 src/os_auth/ossec-authd
+etc/ossec.mc
 
 # Compiled programs
 bin/**
