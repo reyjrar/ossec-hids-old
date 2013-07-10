@@ -15,10 +15,14 @@
 
 
 
-#include "shared.h"
-
+/* strnlen is a GNU extension */
+#ifdef __linux__
+ #define _GNU_SOURCE
+ #include <string.h>
+#endif
 #include "csyslogd.h"
 #include "os_net/os_net.h"
+
 
 
 /* OS_SyslogD: Monitor the alerts and sends them via syslog.
